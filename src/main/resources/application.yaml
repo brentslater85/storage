@@ -1,3 +1,12 @@
 spring:
   application:
-    name: storage
+    name: storage-service
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/storage}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
