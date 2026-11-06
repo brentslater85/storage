@@ -15,7 +15,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
 abstract class StorageApiTest {
 
   @ServiceConnection
-  static final MongoDBContainer MONGO = new MongoDBContainer("mongo:8.0")
+  static final MongoDBContainer MONGO = new MongoDBContainer("mongo:9.0")
       .withCommand("--setParameter", "enableTestCommands=1");
 
   static {
