@@ -30,6 +30,8 @@ class StoredContentTest extends StorageApiTest {
   private static final String CONTENT_FILES = "file_content.files";
   private static final String CONTENT_CHUNKS = "file_content.chunks";
   private static final int SEVERAL_CHUNKS = 1024 * 1024;
+  // Well inside PIT's per-test timeout, so a mutant that breaks clean-up fails an assertion instead of timing out.
+  private static final Duration SERVER_NOTICES_DISCONNECT_WITHIN = Duration.ofSeconds(3);
 
   @Autowired
   GridFSBucket storedContent;
@@ -148,7 +150,7 @@ class StoredContentTest extends StorageApiTest {
   }
 
   private HttpStatusCode retryUploadUntilAccepted(Upload upload) throws InterruptedException {
-    var deadline = Instant.now().plus(Duration.ofSeconds(10));
+    var deadline = Instant.now().plus(SERVER_NOTICES_DISCONNECT_WITHIN);
     var statuses = new ArrayList<HttpStatusCode>();
     while (Instant.now().isBefore(deadline)) {
       var status = storage.upload(upload).status();
@@ -163,7 +165,7 @@ class StoredContentTest extends StorageApiTest {
 
   private void assertNothingStoredFor(String filename) {
     assertThat(storedContentNamed(filename)).isZero();
-    eventually(() -> assertThat(orphanedChunks()).isEmpty());
+    assertThat(orphanedChunks()).isEmpty();
   }
 
   private long storedContentNamed(String filename) {
@@ -182,7 +184,7 @@ class StoredContentTest extends StorageApiTest {
   }
 
   private static void eventually(Runnable assertion) {
-    var deadline = Instant.now().plus(Duration.ofSeconds(10));
+    var deadline = Instant.now().plus(SERVER_NOTICES_DISCONNECT_WITHIN);
     while (true) {
       try {
         assertion.run();

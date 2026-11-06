@@ -217,9 +217,10 @@ threshold; every mutant is currently killed. The large-file tests are excluded t
 ## Build and CI
 
 - `mvn package` builds the jar. `docker build .` builds the image with a multi-stage Dockerfile, so no local Java is needed.
-- GitHub Actions (`.github/workflows/ci.yml`) runs `mvn verify` and mutation testing on every push and pull
-  request, then builds the Docker image. Pushes to `main` publish the image to GitHub Container Registry
-  from a separate job, the only one allowed to write packages. Actions are pinned to commit SHAs.
+- GitHub Actions (`.github/workflows/ci.yml`) runs `mvn verify`, mutation testing and the Docker image build
+  as parallel jobs on every push and pull request. Once all three pass, pushes to `main` publish the image to
+  GitHub Container Registry from a separate job, the only one allowed to write packages. Actions are pinned to
+  commit SHAs.
 
 ## Assumptions and decisions
 
