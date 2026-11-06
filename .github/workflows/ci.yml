@@ -11,9 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      # Keep test containers after they stop so their logs can be shown when the build fails.
-      TESTCONTAINERS_RYUK_DISABLED: true
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -23,21 +20,28 @@ jobs:
           java-version: '21'
           cache: maven
 
+      # Testcontainers removes its containers on exit, so record their lifecycle to explain any that stop early.
+      - name: Record container events
+        run: docker events --format '{{.Time}} {{.Type}} {{.Action}} {{.Actor.Attributes.image}} exit={{index .Actor.Attributes "exitCode"}} signal={{index .Actor.Attributes "signal"}}' > "$RUNNER_TEMP/docker-events.log" &
+
       - name: Build and test
         run: mvn -B verify
 
       - name: Mutation testing
         run: mvn -B test-compile org.pitest:pitest-maven:mutationCoverage
 
-      - name: Show test container logs
+      - name: Diagnose test containers
         if: failure()
         run: |
-          docker ps -a
-          for container in $(docker ps -aq); do
-            echo "::group::$(docker inspect --format '{{.Config.Image}} {{.State.Status}} exit={{.State.ExitCode}}' "$container")"
-            docker logs "$container" 2>&1 | tail -200
-            echo "::endgroup::"
-          done
+          echo "::group::Container events"
+          cat "$RUNNER_TEMP/docker-events.log"
+          echo "::endgroup::"
+          docker run -d --name mongo-probe mongo:8.0 --setParameter enableTestCommands=1
+          sleep 5
+          docker inspect --format 'status={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}' mongo-probe
+          echo "::group::Mongo probe log"
+          docker logs mongo-probe 2>&1 | tail -200
+          echo "::endgroup::"
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
